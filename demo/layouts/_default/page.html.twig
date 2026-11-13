@@ -1,0 +1,66 @@
+{#- Base layout of the demo: Cecil's default layout (Pico CSS), with the Open Graph image of the page -#}
+{%- set generated = og_image(page) -%}
+<!DOCTYPE html>
+<html lang="{{ site.language }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {#- the generated image is given to the metatags partial (if null, `page.image` or `site.image` is used) #}
+    {{- include('partials/metatags.html.twig', {page, site, image: generated}, with_context = false) ~}}
+    <meta name="color-scheme" content="light dark">
+    <style>{% apply minify_css ~%}
+      {{- include('partials/pico.css.twig') ~}}
+      @media (min-width: 1024px) {
+        body > header,
+        body > main,
+        body > footer {
+          max-width: 768px;
+        }
+      }
+      .site-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--pico-h1-color);
+        text-decoration: none;
+      }
+      figure img {
+        border: 1px solid var(--pico-muted-border-color);
+        border-radius: var(--pico-border-radius);
+      }
+    {% endapply %}</style>
+  </head>
+  <body>
+    <header>
+      <hgroup>
+        <a class="site-title" href="{{ url(site.home) }}">{{ site.title }}</a>
+        <p>{{ site.baseline }}</p>
+      </hgroup>
+      <nav>
+        <ul>
+          {%- for entry in site.menus.main|sort_by_weight %}
+          <li><a href="{{ url(entry.url) }}"{% if url(entry.url) == url(page) %} aria-current="page"{% endif %}>{{ entry.name }}</a></li>
+          {%- endfor %}
+        </ul>
+      </nav>
+    </header>
+    <main>
+      {#- the Open Graph image of the page, displayed on every page of the demo #}
+      {%- set image = generated ?? (page.image is defined and page.image is not empty ? asset(page.image) : null) %}
+      {%- if image %}
+      <figure>
+        <img src="{{ url(image) }}" width="{{ image.width }}" height="{{ image.height }}" alt="{{ page.title|e('html_attr') }}">
+        <figcaption>{{ generated ? 'Generated Open Graph image' : 'Image of the page (nothing generated)' }}: <code>{{ image.path }}</code></figcaption>
+      </figure>
+      {%- endif %}
+      {%- block content %}
+      <article>
+        <h1>{{ page.title }}</h1>
+        {{ page.content }}
+      </article>
+      {%- endblock content %}
+    </main>
+    <footer>
+      <small><a href="{{ cecil.url }}">{{ cecil.poweredby }}</a></small>
+    </footer>
+  </body>
+</html>
