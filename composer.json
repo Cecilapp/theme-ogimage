@@ -1,0 +1,25 @@
+{
+  "name": "cecil/theme-ogimage",
+  "type": "cecil-theme",
+  "description": "Cecil component theme Open Graph image: generates the Open Graph images of pages",
+  "keywords": ["Cecil", "theme", "plugin", "Open Graph", "image"],
+  "license": "MIT",
+  "require": {
+    "cecil/theme-installer": "^2.1"
+  },
+  "extra": {
+    "cecil": {
+      "theme-name": "ogimage"
+    },
+    "branch-alias": {
+      "dev-main": "1.x-dev"
+    }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "config": {
+    "allow-plugins": {
+      "cecil/theme-installer": true
+    }
+  }
+}
