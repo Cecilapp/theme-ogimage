@@ -30,7 +30,8 @@ class Plugin extends AbstractPlugin
                         'bottom' => 100,
                         'left'   => 110,
                     ],
-                    'by' => 'by',
+                    'by'         => 'by',
+                    'site_title' => true,
                 ],
             ])
             ->twigExtension(Twig\Extension::class, name: 'OgImage');
