@@ -69,6 +69,8 @@ Then give the generated image to the [metatags partial](https://cecil.app/docume
 | Homepage, and pages out of the [`sections`](#configuration) | Image of the site, or none if the site has an `image`         |
 | Other pages                                                 | Image of the page: its title, its author and the site title   |
 
+The site title of the images of the pages can be hidden with the `site_title` option (e.g. on a personal website, where the site title is the name of the author).
+
 Without argument, `og_image()` returns the image of the site.
 
 The author is the `author` of the page, otherwise the one of the site (a name, or a map with a `name` key).
@@ -101,6 +103,7 @@ ogimage:
     bottom: 100
     left: 110
   by: by                             # text before the name of the author
+  site_title: true                   # `false` to hide the site title from the images of the pages
 ```
 
 For example, to generate an image for blog posts only, with your own background:

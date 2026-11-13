@@ -88,6 +88,10 @@ class Extension extends AbstractExtension
         // texts
         $siteTitle = (string) $config->get('title', $language);
         if ($page !== null) {
+            // the site title can be hidden from the footer (e.g. when it is the name of the author)
+            if (!$option('site_title', true)) {
+                $siteTitle = '';
+            }
             $title = (string) $page->getVariable('title');
             $author = $page->getVariable('author') ?? $config->get('author', $language);
             $author = \is_array($author) ? (string) ($author['name'] ?? '') : (string) $author;
