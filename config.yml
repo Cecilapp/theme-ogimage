@@ -1,0 +1,5 @@
+# Declares the plugin: enabling this component theme registers the `og_image()` Twig function.
+# The default options (`ogimage`) are registered by the plugin: see the README.
+extensions:
+  plugins:
+    OgImage: OgImage\Plugin
