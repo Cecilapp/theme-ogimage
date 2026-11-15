@@ -66,7 +66,7 @@ Then give the generated image to the [metatags partial](https://cecil.app/docume
 |-------------------------------------------------------------|---------------------------------------------------------------|
 | With an `image` in its front matter                         | None (`null`): the image of the page is used                  |
 | With `ogimage: false` in its front matter                   | None (`null`)                                                 |
-| Homepage, and pages out of the [`sections`](#configuration) | Image of the site, or none if the site has an `image`         |
+| Homepage, and pages out of the [`sections`](#sections)      | Image of the site, or none if the site has an `image`         |
 | Other pages                                                 | Image of the page: its title, its author and the site title   |
 
 The site title of the images of the pages can be hidden with the `site_title` option (e.g. on a personal website, where the site title is the name of the author).
@@ -115,6 +115,41 @@ ogimage:
   padding:
     left: 80
 ```
+
+#### Sections
+
+The `sections` option sets which pages have their own image (their title, their author and the site title): the other pages get the image of the site (its title and its description). The homepage always gets the image of the site.
+
+The section of a page is the top-level directory of the page in `pages/` (e.g. `blog` for `pages/blog/2026/post.md`): a sub-directory can't be selected. Names are case-sensitive.
+
+With the following pages:
+
+```text
+pages/
+├── index.md       # homepage
+├── about.md       # out of any section
+├── blog/
+│   ├── index.md   # list of the "blog" section
+│   └── post.md
+└── docs/
+    └── install.md
+```
+
+| `sections`     | Image of the page                       | Image of the site                           |
+|----------------|-----------------------------------------|---------------------------------------------|
+| `[]` (default) | `about.md`, `blog/*`, `docs/*`          | `index.md`                                  |
+| `[blog]`       | `blog/index.md`, `blog/post.md`         | `index.md`, `about.md`, `docs/install.md`   |
+| `[blog, docs]` | `blog/*`, `docs/*`                      | `index.md`, `about.md`                      |
+
+When the site has an `image` in its configuration, nothing is generated for the pages which get the image of the site: `og_image()` returns `null`, and the metatags partial uses the `image` of the site:
+
+```yaml
+image: images/og-site.jpg # used by the homepage, about.md and docs/install.md
+ogimage:
+  sections: [blog]        # an image is generated for the blog pages only
+```
+
+Whatever the `sections`, a page with an `image` or `ogimage: false` in its front matter has no generated image.
 
 The background and the fonts are [assets](https://cecil.app/documentation/assets/): set a path in the `assets` (or `static`) directory of your site, or override the default files by creating a file with the same path (e.g. `assets/ogimage/background.png`).
 
