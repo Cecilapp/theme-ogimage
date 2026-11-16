@@ -23,6 +23,11 @@ class Extension extends AbstractExtension
     private const TITLE_SIZES = [64, 56, 48, 42, 36];
     private const FOOTER_SIZE = 22;
 
+    /** Font size of the subtitle (description of the site or of a section), its maximum number of lines, and its space from the title. */
+    private const SUBTITLE_SIZE = 30;
+    private const SUBTITLE_LINES = 3;
+    private const SUBTITLE_GAP = 30;
+
     /** Options of the style of the images of the pages, which can be overridden by section and by page. */
     private const STYLE_OPTIONS = ['background', 'color', 'fonts', 'padding', 'by', 'site_title'];
 
@@ -46,7 +51,7 @@ class Extension extends AbstractExtension
 
     /**
      * Generates the Open Graph image of a page (title, author and site title),
-     * or the image of the site (title and description) without page, for the homepage,
+     * of a section (title and description, like the image of the site), or the image of the site (title and description) without page, for the homepage,
      * and for pages out of the `ogimage.sections` sections.
      *
      * The style options of the site can be overridden by those of the section of the page
@@ -106,7 +111,14 @@ class Extension extends AbstractExtension
 
         // texts
         $siteTitle = (string) $config->get('title', $language);
-        if ($page !== null) {
+        $subtitle = '';
+        if ($page !== null && $page->getType() === Type::SECTION->value) {
+            // like the image of the site: title and description of the section (or of the site), baseline of the site
+            $title = (string) $page->getVariable('title');
+            $subtitle = (string) ($page->getVariable('description') ?: $config->get('description', $language));
+            $footer = ['', (string) $config->get('baseline', $language), ''];
+            $path = $prefix . '/' . trim((string) $page->getPath(), '/') . '/og.png';
+        } elseif ($page !== null) {
             // the site title can be hidden from the footer (e.g. when it is the name of the author)
             if (!($options['site_title'] ?? true)) {
                 $siteTitle = '';
@@ -119,7 +131,8 @@ class Extension extends AbstractExtension
             $path = $prefix . '/' . trim((string) $page->getPath(), '/') . '/og.png';
         } else {
             $title = $siteTitle;
-            $footer = ['', (string) $config->get('description', $language), ''];
+            $subtitle = (string) $config->get('description', $language);
+            $footer = ['', (string) $config->get('baseline', $language), ''];
             $path = $prefix . '/og.png';
         }
         $path = str_replace('//', '/', $path);
@@ -138,11 +151,11 @@ class Extension extends AbstractExtension
             return null;
         }
 
-        $hash = hash('xxh128', implode('|', [$title, ...$footer, ...$color, ...$padding, $background['hash'], $regular['hash'], $bold['hash']]));
+        $hash = hash('xxh128', implode('|', [$title, $subtitle, ...$footer, ...$color, ...$padding, $background['hash'], $regular['hash'], $bold['hash']]));
         $cache = new Cache($this->builder, 'ogimage');
         $cacheKey = 'og_' . $hash;
         if (!$cache->has($cacheKey)) {
-            $png = $this->draw($background['file'], $regular['file'], $bold['file'], $title, $footer, $color, $padding);
+            $png = $this->draw($background['file'], $regular['file'], $bold['file'], $title, $subtitle, $footer, $color, $padding);
             if ($png === null) {
                 $this->builder->getLogger()->warning(\sprintf('Open Graph image: unable to generate "%s" (background "%s" is not a valid image).', $path, $background['path']));
 
@@ -257,11 +270,12 @@ class Extension extends AbstractExtension
     /**
      * Draws the Open Graph image and returns its PNG binary.
      *
+     * @param string                        $subtitle text under the title (empty for none)
      * @param array{string, string, string} $footer  prefix and bold text of the bottom left line, bold text of the bottom right
      * @param array{int, int, int}          $color   red, green and blue values of the text color
      * @param array<string, int>            $padding space around the text (top, right, bottom, left)
      */
-    private function draw(string $backgroundFile, string $regularFont, string $boldFont, string $title, array $footer, array $color, array $padding): ?string
+    private function draw(string $backgroundFile, string $regularFont, string $boldFont, string $title, string $subtitle, array $footer, array $color, array $padding): ?string
     {
         $background = @imagecreatefromstring((string) file_get_contents($backgroundFile));
         if ($background === false) {
@@ -279,8 +293,20 @@ class Extension extends AbstractExtension
         $bottom = self::HEIGHT - $padding['bottom'];
         $maxWidth = $right - $left;
 
-        // title: the biggest font size that fits above the footer
+        // subtitle: a few lines under the title, which take their space from the title
         $titleBottom = $bottom - 70;
+        $subtitleLines = [];
+        $subtitleLineHeight = (int) round(self::SUBTITLE_SIZE * 1.4);
+        if (trim($subtitle) !== '') {
+            $subtitleLines = $this->wrap($subtitle, $regularFont, self::SUBTITLE_SIZE, $maxWidth);
+            if (\count($subtitleLines) > self::SUBTITLE_LINES) {
+                $subtitleLines = \array_slice($subtitleLines, 0, self::SUBTITLE_LINES);
+                $subtitleLines[self::SUBTITLE_LINES - 1] = $this->ellipsis($subtitleLines[self::SUBTITLE_LINES - 1] . '…', $regularFont, self::SUBTITLE_SIZE, $maxWidth);
+            }
+            $titleBottom -= self::SUBTITLE_GAP + \count($subtitleLines) * $subtitleLineHeight;
+        }
+
+        // title: the biggest font size that fits above the subtitle and the footer
         $size = self::TITLE_SIZES[0];
         $lines = [];
         $lineHeight = 0;
@@ -301,8 +327,14 @@ class Extension extends AbstractExtension
             imagettftext($image, $size, 0, $left, $y, $ink, $boldFont, $line);
             $y += $lineHeight;
         }
+        // the subtitle follows the last line of the title
+        $y += self::SUBTITLE_GAP + self::SUBTITLE_SIZE - $size;
+        foreach ($subtitleLines as $line) {
+            imagettftext($image, self::SUBTITLE_SIZE, 0, $left, $y, $ink, $regularFont, $line);
+            $y += $subtitleLineHeight;
+        }
 
-        // footer: "by <author>" (or the site description) on the left, site title on the right
+        // footer: "by <author>" (or the site baseline) on the left, site title on the right
         [$prefix, $text, $aside] = $footer;
         $asideWidth = 0;
         if ($aside !== '') {
