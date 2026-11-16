@@ -10,6 +10,7 @@ The _Open Graph image_ component theme for [Cecil](https://cecil.app) generates 
 
 - An image for each page (`og.png`, 1200 × 628), published next to the page
 - An image for the site (title and description), used by the homepage
+- An image for each section (title and description), like the one of the site
 - Nothing generated for a page (or a site) which already has an `image`
 - Title wrapped on several lines, with a font size adapted to its length
 - Custom background, fonts, text color and padding, for the whole site, a section or a page
@@ -67,6 +68,7 @@ Then give the generated image to the [metatags partial](https://cecil.app/docume
 | With an `image` in its front matter                         | None (`null`): the image of the page is used                  |
 | With `ogimage: false` in its front matter                   | None (`null`)                                                 |
 | Homepage, and pages out of the [`sections`](#sections)      | Image of the site, or none if the site has an `image`         |
+| Section (list of its pages, e.g. `blog/index.md`)           | Image of the section: its title and its description           |
 | Other pages                                                 | Image of the page: its title, its author and the site title   |
 
 The site title of the images of the pages can be hidden with the `site_title` option (e.g. on a personal website, where the site title is the name of the author).
@@ -74,6 +76,8 @@ The site title of the images of the pages can be hidden with the `site_title` op
 Without argument, `og_image()` returns the image of the site.
 
 The author is the `author` of the page, otherwise the one of the site (a name, or a map with a `name` key).
+
+The description of a section is the `description` in the front matter of its `index.md`, otherwise the one of the site. The image of a section gets the style of the section, and is generated only if the section is in the [`sections`](#sections) (otherwise it gets the image of the site).
 
 As the function returns an asset, the image can also be displayed in a page:
 
