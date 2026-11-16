@@ -46,7 +46,7 @@ class Extension extends AbstractExtension
 
     /**
      * Generates the Open Graph image of a page (title, author and site title),
-     * or the image of the site (title and description) without page, for the homepage,
+     * of a section (title and description, like the image of the site), or the image of the site (title and description) without page, for the homepage,
      * and for pages out of the `ogimage.sections` sections.
      *
      * The style options of the site can be overridden by those of the section of the page
@@ -106,7 +106,13 @@ class Extension extends AbstractExtension
 
         // texts
         $siteTitle = (string) $config->get('title', $language);
-        if ($page !== null) {
+        if ($page !== null && $page->getType() === Type::SECTION->value) {
+            // like the image of the site: title and description of the section (or of the site)
+            $title = (string) $page->getVariable('title');
+            $description = (string) ($page->getVariable('description') ?: $config->get('description', $language));
+            $footer = ['', $description, ''];
+            $path = $prefix . '/' . trim((string) $page->getPath(), '/') . '/og.png';
+        } elseif ($page !== null) {
             // the site title can be hidden from the footer (e.g. when it is the name of the author)
             if (!($options['site_title'] ?? true)) {
                 $siteTitle = '';
