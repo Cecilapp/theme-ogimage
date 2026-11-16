@@ -9,8 +9,8 @@ The _Open Graph image_ component theme for [Cecil](https://cecil.app) generates 
 ## Features
 
 - An image for each page (`og.png`, 1200 × 628), published next to the page
-- An image for the site (title and description), used by the homepage
-- An image for each section (title and description), like the one of the site
+- An image for the site (title, description and baseline), used by the homepage
+- An image for each section (title, description and baseline of the site), like the one of the site
 - Nothing generated for a page (or a site) which already has an `image`
 - Title wrapped on several lines, with a font size adapted to its length
 - Custom background, fonts, text color and padding, for the whole site, a section or a page
@@ -68,12 +68,12 @@ Then give the generated image to the [metatags partial](https://cecil.app/docume
 | With an `image` in its front matter                         | None (`null`): the image of the page is used                  |
 | With `ogimage: false` in its front matter                   | None (`null`)                                                 |
 | Homepage, and pages out of the [`sections`](#sections)      | Image of the site, or none if the site has an `image`         |
-| Section (list of its pages, e.g. `blog/index.md`)           | Image of the section: its title and its description           |
+| Section (list of its pages, e.g. `blog/index.md`)           | Image of the section: title, description and site baseline    |
 | Other pages                                                 | Image of the page: its title, its author and the site title   |
 
 The site title of the images of the pages can be hidden with the `site_title` option (e.g. on a personal website, where the site title is the name of the author).
 
-Without argument, `og_image()` returns the image of the site.
+Without argument, `og_image()` returns the image of the site: its title, its `description` under the title (on up to three lines) and its `baseline` at the bottom.
 
 The author is the `author` of the page, otherwise the one of the site (a name, or a map with a `name` key).
 
@@ -122,7 +122,7 @@ ogimage:
 
 #### Sections
 
-The `sections` option sets which pages have their own image (their title, their author and the site title): the other pages get the image of the site (its title and its description). The homepage always gets the image of the site.
+The `sections` option sets which pages have their own image (their title, their author and the site title): the other pages get the image of the site (its title, its description and its baseline). The homepage always gets the image of the site.
 
 The section of a page is the top-level directory of the page in `pages/` (e.g. `blog` for `pages/blog/2026/post.md`): a sub-directory can't be selected. Names are case-sensitive.
 
@@ -202,7 +202,7 @@ The background and the fonts are [assets](https://cecil.app/documentation/assets
 
 ### Internationalization
 
-The title and the description of the site, and the options of the theme, are those of the language of the page: translate the text before the author in the configuration of the language.
+The title, the description and the baseline of the site, and the options of the theme, are those of the language of the page: translate the text before the author in the configuration of the language.
 
 ```yaml
 languages:
