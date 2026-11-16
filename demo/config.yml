@@ -10,5 +10,12 @@ theme:
 menus:
   main:
     - {id: blog, name: Blog, url: /blog/, weight: 10}
+    - {id: docs, name: Docs, url: /docs/, weight: 15}
     - {id: about, name: About, url: /about/, weight: 20}
     - {id: github, name: GitHub, url: 'https://github.com/Cecilapp/theme-ogimage', weight: 30}
+ogimage:
+  sections:
+    blog: ~                          # image generated with the default style
+    docs:                            # image generated with the style of the section
+      background: docs-background.png
+      color: '#ffffff'
