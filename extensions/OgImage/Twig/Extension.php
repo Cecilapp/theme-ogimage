@@ -23,6 +23,9 @@ class Extension extends AbstractExtension
     private const TITLE_SIZES = [64, 56, 48, 42, 36];
     private const FOOTER_SIZE = 22;
 
+    /** Options of the style of the images of the pages, which can be overridden by section and by page. */
+    private const STYLE_OPTIONS = ['background', 'color', 'fonts', 'padding', 'by', 'site_title'];
+
     /** @var Builder */
     protected $builder;
 
@@ -46,6 +49,9 @@ class Extension extends AbstractExtension
      * or the image of the site (title and description) without page, for the homepage,
      * and for pages out of the `ogimage.sections` sections.
      *
+     * The style options of the site can be overridden by those of the section of the page
+     * (`ogimage.sections.<section>`), then by those of the page (`ogimage` map in its front matter).
+     *
      * Returns null if there is nothing to generate: the page (or the site) has its own image,
      * the generation is disabled (`ogimage.enabled`, or `ogimage: false` in the front matter),
      * or the image can't be generated (GD with FreeType is required).
@@ -54,12 +60,11 @@ class Extension extends AbstractExtension
     {
         $config = $this->builder->getConfig();
         $language = $page?->getVariable('language') ?? $config->getLanguageDefault();
-        // options are read one by one, to get the localized value of each of them
-        $option = fn (string $key, mixed $default = null): mixed => $config->get("ogimage.$key", $language) ?? $default;
 
         if (!$config->isEnabled('ogimage', $language)) {
             return null;
         }
+        $sections = $this->sections((array) ($config->get('ogimage.sections', $language) ?? []));
         // like the pages, the images of a language are prefixed with its code, except for the default language
         $prefix = $language !== $config->getLanguageDefault() || $config->isEnabled('language.prefix') ? "/$language" : '';
         if ($page !== null) {
@@ -69,7 +74,7 @@ class Extension extends AbstractExtension
             if (!empty($page->getVariable('image')) || $page->getVariable('ogimage') === false) {
                 return null;
             }
-            if (!$this->hasOwnImage($page, (array) $option('sections', []))) {
+            if (!$this->hasOwnImage($page, $sections)) {
                 $page = null;
             }
         }
@@ -85,17 +90,31 @@ class Extension extends AbstractExtension
             return null;
         }
 
+        // style options: those of the site (read one by one, to get the localized value of each of them),
+        // overridden by those of the section of the page, then by those of the page
+        $options = [];
+        foreach (self::STYLE_OPTIONS as $key) {
+            $options[$key] = $config->get("ogimage.$key", $language);
+        }
+        if ($page !== null) {
+            $options = $this->override($options, $sections[(string) $page->getSection()] ?? []);
+            $frontMatter = $page->getVariable('ogimage');
+            if (\is_array($frontMatter)) {
+                $options = $this->override($options, $frontMatter);
+            }
+        }
+
         // texts
         $siteTitle = (string) $config->get('title', $language);
         if ($page !== null) {
             // the site title can be hidden from the footer (e.g. when it is the name of the author)
-            if (!$option('site_title', true)) {
+            if (!($options['site_title'] ?? true)) {
                 $siteTitle = '';
             }
             $title = (string) $page->getVariable('title');
             $author = $page->getVariable('author') ?? $config->get('author', $language);
             $author = \is_array($author) ? (string) ($author['name'] ?? '') : (string) $author;
-            $by = trim((string) $option('by', ''));
+            $by = trim((string) ($options['by'] ?? ''));
             $footer = $author !== '' ? [$by !== '' ? "$by " : '', $author, $siteTitle] : ['', '', $siteTitle];
             $path = $prefix . '/' . trim((string) $page->getPath(), '/') . '/og.png';
         } else {
@@ -106,12 +125,13 @@ class Extension extends AbstractExtension
         $path = str_replace('//', '/', $path);
 
         // style
-        $padding = array_map('intval', (array) $option('padding', [])) + ['top' => 105, 'right' => 110, 'bottom' => 100, 'left' => 110];
-        $color = $this->parseColor((string) $option('color', ''));
+        $padding = array_map('intval', (array) ($options['padding'] ?? [])) + ['top' => 105, 'right' => 110, 'bottom' => 100, 'left' => 110];
+        $color = $this->parseColor((string) ($options['color'] ?? ''));
+        $fonts = (array) ($options['fonts'] ?? []);
         try {
-            $background = new Asset($this->builder, (string) $option('background', 'ogimage/background.png'));
-            $regular = new Asset($this->builder, (string) $option('fonts.regular', 'ogimage/fonts/GoogleSansCode-Regular.ttf'));
-            $bold = new Asset($this->builder, (string) $option('fonts.bold', 'ogimage/fonts/GoogleSansCode-Bold.ttf'));
+            $background = new Asset($this->builder, (string) ($options['background'] ?? 'ogimage/background.png'));
+            $regular = new Asset($this->builder, (string) ($fonts['regular'] ?? 'ogimage/fonts/GoogleSansCode-Regular.ttf'));
+            $bold = new Asset($this->builder, (string) ($fonts['bold'] ?? 'ogimage/fonts/GoogleSansCode-Bold.ttf'));
         } catch (\Exception $e) {
             $this->builder->getLogger()->warning(\sprintf('Open Graph image: unable to generate "%s" (%s).', $path, $e->getMessage()));
 
@@ -154,7 +174,7 @@ class Extension extends AbstractExtension
     /**
      * Has the page its own image (otherwise the image of the site is used)?
      *
-     * @param string[] $sections sections of the pages with their own image (all pages if empty)
+     * @param array<string, array<string, mixed>> $sections sections of the pages with their own image (all pages if empty)
      */
     private function hasOwnImage(Page $page, array $sections): bool
     {
@@ -162,7 +182,58 @@ class Extension extends AbstractExtension
             return false;
         }
 
-        return $sections === [] || \in_array($page->getSection(), $sections, true);
+        return $sections === [] || \array_key_exists((string) $page->getSection(), $sections);
+    }
+
+    /**
+     * Normalizes the `ogimage.sections` option, a list of names (`[blog, docs]`) and/or a map of names
+     * and options (`{blog: {color: '#fff'}, docs: ~}`), to a map of names and options.
+     * A section set to `false` is ignored.
+     *
+     * @param array<int|string, mixed> $sections
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function sections(array $sections): array
+    {
+        $normalized = [];
+        foreach ($sections as $key => $value) {
+            if (\is_int($key)) {
+                if (\is_string($value) && $value !== '') {
+                    $normalized[$value] ??= [];
+                }
+                continue;
+            }
+            if ($value === false) {
+                continue;
+            }
+            $normalized[$key] = \is_array($value) ? $value : [];
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * Overrides style options: only the style options are taken, null values are ignored,
+     * and the maps (`fonts`, `padding`) are merged key by key.
+     *
+     * @param array<string, mixed> $options
+     * @param array<string, mixed> $overrides
+     *
+     * @return array<string, mixed>
+     */
+    private function override(array $options, array $overrides): array
+    {
+        foreach (self::STYLE_OPTIONS as $key) {
+            if (!isset($overrides[$key])) {
+                continue;
+            }
+            $options[$key] = \is_array($overrides[$key]) && \is_array($options[$key] ?? null)
+                ? array_replace($options[$key], array_filter($overrides[$key], fn ($value) => $value !== null))
+                : $overrides[$key];
+        }
+
+        return $options;
     }
 
     /**

@@ -12,7 +12,7 @@ The _Open Graph image_ component theme for [Cecil](https://cecil.app) generates 
 - An image for the site (title and description), used by the homepage
 - Nothing generated for a page (or a site) which already has an `image`
 - Title wrapped on several lines, with a font size adapted to its length
-- Custom background, fonts, text color and padding
+- Custom background, fonts, text color and padding, for the whole site, a section or a page
 - Multilingual: texts and options of each language
 - Images are cached: they are only generated again when a text or an option changes
 
@@ -91,7 +91,7 @@ Default options, registered by the plugin:
 ```yaml
 ogimage:
   enabled: true                      # `false` to disable the generation
-  sections: []                       # sections of the pages with their own image (all pages if empty)
+  sections: []                       # sections of the pages with their own image (all pages if empty), and their style
   background: ogimage/background.png # background image (asset path), resized to 1200 × 628
   color: '#111111'                   # text color (hexadecimal)
   fonts:                             # TrueType fonts (asset paths)
@@ -150,6 +150,49 @@ ogimage:
 ```
 
 Whatever the `sections`, a page with an `image` or `ogimage: false` in its front matter has no generated image.
+
+#### Style of a section
+
+`sections` can also be a map of the sections and their style: the options `background`, `color`, `fonts`, `padding`, `by` and `site_title` of a section override those of the site, for the images of its pages. A section without option (`~`) uses the style of the site.
+
+```yaml
+ogimage:
+  sections:
+    blog: ~                              # style of the site
+    docs:
+      background: images/og-docs.png     # background of the "docs" section
+      color: '#ffffff'
+      padding:
+        left: 80                         # the other sides keep the padding of the site
+```
+
+#### Style of a page
+
+The style of a page can be set by an `ogimage` map in its front matter, with the same options: they override those of the section and of the site.
+
+```yaml
+---
+title: My post
+ogimage:
+  background: images/og-special.png
+  color: '#ffc400'
+---
+```
+
+To give a style to all the pages of a section without changing the configuration, set it in the [`cascade`](https://cecil.app/documentation/content/) variable of the front matter of the section (its `index.md`):
+
+```yaml
+---
+title: Docs
+cascade:
+  ogimage:
+    background: images/og-docs.png
+---
+```
+
+A page with its own `ogimage` map doesn't get the one of the `cascade` (the maps aren't merged).
+
+The style of a section or of a page only applies to the images of the pages: the pages which get the image of the site (homepage, pages out of the `sections`) use the style of the site.
 
 The background and the fonts are [assets](https://cecil.app/documentation/assets/): set a path in the `assets` (or `static`) directory of your site, or override the default files by creating a file with the same path (e.g. `assets/ogimage/background.png`).
 
